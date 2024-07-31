@@ -48,6 +48,8 @@ export default function MapScreen() {
     <View style={styles.container}>
       <MapView
         style={styles.map}
+        showsUserLocation={true}
+        followsUserLocation={true}
         initialRegion={{
           latitude: markers[0].coordinate.latitude,
           longitude: markers[0].coordinate.longitude,

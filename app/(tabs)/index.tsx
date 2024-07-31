@@ -1,30 +1,30 @@
 import { Image, StyleSheet, Platform } from 'react-native';
-import React, {useEffect} from 'react';
+import React, { useEffect } from 'react';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import {collection, addDoc} from 'firebase/firestore';
-import {FIREBASE_APP,FIREBASE_AUTH,FIREBASE_DB} from '@/FirebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
+import { FIREBASE_APP, FIREBASE_AUTH, FIREBASE_DB } from '@/FirebaseConfig';
 
 export default function HomeScreen() {
 
-  const writeData = async() =>{
+  const writeData = async () => {
     try {
-      const doRef = await addDoc(collection(FIREBASE_DB, 'kadoi'),{
-        name: 'kados1',
-        topothesia : 'karlovasi'
+      const doRef = await addDoc(collection(FIREBASE_DB, 'kadoi'), {
+        name: 'kados2',
+        topothesia: 'karlovasi'
       });
       console.log('writen');
-    }catch (e){
-      console.error(e); 
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  useEffect(()=>{
+  useEffect(() => {
     writeData();
 
-  },[]);
+  }, []);
 
   return (
     <ParallaxScrollView

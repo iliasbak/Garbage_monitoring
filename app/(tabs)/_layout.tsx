@@ -39,6 +39,7 @@ export default function TabLayout() {
           // Add an icon here if you want
         }}
       />
+
     </Tabs>
   );
 }
