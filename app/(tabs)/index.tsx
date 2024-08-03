@@ -22,7 +22,7 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    writeData();
+    //  writeData();
 
   }, []);
 
