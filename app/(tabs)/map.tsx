@@ -50,8 +50,6 @@ export default function MapScreen() {
 
         });
 
-
-
         setMarkers(fetchedMarkers);
         if (fetchedMarkers.length > 0) {
           setRegion({
@@ -169,14 +167,11 @@ export default function MapScreen() {
     <View style={styles.container}>
       <MapView
         style={styles.map}
+        ref={mapRef}
+        initialRegion={region}
         showsUserLocation={true}
         followsUserLocation={true}
-        initialRegion={{
-          latitude: markers[0].coordinate.latitude,
-          longitude: markers[0].coordinate.longitude,
-          latitudeDelta: LATITUDE_DELTA,
-          longitudeDelta: LONGITUDE_DELTA,
-        }}
+
         onUserLocationChange={(event) => {
           setRegion({
             latitude: event.nativeEvent.coordinate.latitude,
