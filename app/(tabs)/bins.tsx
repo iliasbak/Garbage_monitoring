@@ -146,18 +146,20 @@ export default function MapScreen() {
       </TouchableOpacity>
       <TouchableOpacity onPress={() => onOptionSelect('MID')} style={styles.option}>
         <Image
-          source={{ uri: 'https://e7.pngegg.com/pngimages/540/335/png-clipart-recycle-bin-logo-trash-recycling-bin-file-deletion-computer-file-recycle-bin-glass-recycling.png' }}
-          style={styles.optionImage}
+          style={{ height: 100, width: 50 }}
+          source={{
+            uri: 'https://reactnative.dev/img/tiny_logo.png',
+          }}
         />
-        <Text>MID 3</Text>
+        <Text>MID</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => onOptionSelect('FULL')} style={styles.option}>
         <Image
           source={require('../../assets/images/red-bin.png')}
-          style={styles.optionImage}
+          style={{ width: 30, height: 30 }}
           resizeMode="contain"
         />
-        <Text>FULL1</Text>
+        <Text>FULL</Text>
       </TouchableOpacity>
     </View>
   );
@@ -253,26 +255,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   popupContainer: {
-    borderRadius: 15,
-    padding: 15,
-    width: 300, // Adjust as needed
-    height: 150, // Adjust as needed
-    backgroundColor: 'white', // Add this to see the container
+    // borderRadius: 15,
+    // padding: 10,
+    width: 300,  // Increase this if needed
+    height: 100, // Increase this if needed
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    backgroundColor: 'white'
+    // alignItems: 'center',
   },
   option: {
-    width: 80, // Adjust as needed
-    height: 80, // Adjust as needed
+    //   width: 120, // Adjust as needed
+    //   height: 80, // Adjust as needed
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1, // Add this to see the boundaries
-    borderColor: 'black',
+    //   borderWidth: 1, // Add this to see the boundaries
+    //   borderColor: 'black',
   },
   optionImage: {
-    width: 40,  // Set a reasonable width
-    height: 40, // Set a reasonable height
+    width: 50,
+    height: 50,
     marginBottom: 5, // Add some space between image and text
   },
 });
