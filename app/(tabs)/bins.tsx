@@ -133,10 +133,34 @@ export default function MapScreen() {
     );
   }
 
-  // const MarkerPopup = ({ onOptionSelect }) => (
-
-
-  // );
+  const MarkerPopup = ({ onOptionSelect }) => (
+    <View style={styles.popupContainer}>
+      <TouchableOpacity onPress={() => onOptionSelect('GREEN')} style={styles.option}>
+        <Image
+          source={require('../../assets/images/green-bin.png')}
+          style={styles.optionImage}
+          resizeMode="contain"
+          onError={(e) => console.log("Image load error for green bin:", e.nativeEvent.error)}
+        />
+        <Text>EMPTY</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => onOptionSelect('MID')} style={styles.option}>
+        <Image
+          source={{ uri: 'https://e7.pngegg.com/pngimages/540/335/png-clipart-recycle-bin-logo-trash-recycling-bin-file-deletion-computer-file-recycle-bin-glass-recycling.png' }}
+          style={styles.optionImage}
+        />
+        <Text>MID 3</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => onOptionSelect('FULL')} style={styles.option}>
+        <Image
+          source={require('../../assets/images/red-bin.png')}
+          style={styles.optionImage}
+          resizeMode="contain"
+        />
+        <Text>FULL1</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   //function to get the status of the bin and assign the accoring png
   const getMarkerStatus = (status: MarkerStatus) => {
@@ -168,6 +192,7 @@ export default function MapScreen() {
           });
         }}
       >
+
         {markers.map((marker) => (
           <Marker
             key={marker.id}
@@ -180,6 +205,15 @@ export default function MapScreen() {
               style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
+            <Callout tooltip>
+              <MarkerPopup
+                onOptionSelect={(option) => {
+                  // Handle option selection here
+                  console.log(`Selected option: ${option} for marker ${marker.id}`);
+                  // You can add your logic here, e.g., updating marker status
+                }}
+              />
+            </Callout>
           </Marker>
         ))}
       </MapView>
@@ -217,5 +251,28 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 30,
     color: '#FFFFFF',
+  },
+  popupContainer: {
+    borderRadius: 15,
+    padding: 15,
+    width: 300, // Adjust as needed
+    height: 150, // Adjust as needed
+    backgroundColor: 'white', // Add this to see the container
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  option: {
+    width: 80, // Adjust as needed
+    height: 80, // Adjust as needed
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1, // Add this to see the boundaries
+    borderColor: 'black',
+  },
+  optionImage: {
+    width: 40,  // Set a reasonable width
+    height: 40, // Set a reasonable height
+    marginBottom: 5, // Add some space between image and text
   },
 });
