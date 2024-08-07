@@ -9,22 +9,6 @@ import { FIREBASE_APP, FIREBASE_AUTH, FIREBASE_DB } from '@/FirebaseConfig';
 
 export default function HomeScreen() {
 
-  const writeData = async () => {
-    try {
-      const doRef = await addDoc(collection(FIREBASE_DB, 'kadoi'), {
-        name: 'kados2',
-        topothesia: 'karlovasi'
-      });
-      console.log('writen');
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  useEffect(() => {
-    //  writeData();
-
-  }, []);
 
   return (
     <ParallaxScrollView

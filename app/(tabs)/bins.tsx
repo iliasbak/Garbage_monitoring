@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
+import MapView, { Marker, Region, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 import { FIREBASE_APP, FIREBASE_AUTH, FIREBASE_DB } from '@/FirebaseConfig';
@@ -125,38 +125,6 @@ export default function MapScreen() {
   };
 
 
-  const getCurrentLocation = async () => {
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Permission to access location was denied');
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
-      updateRegion(location.coords.latitude, location.coords.longitude);
-
-      // Print the current location to VSCode console
-      console.log('Current Location:', {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        altitude: location.coords.altitude,
-        accuracy: location.coords.accuracy,
-        altitudeAccuracy: location.coords.altitudeAccuracy,
-        heading: location.coords.heading,
-        speed: location.coords.speed,
-      });
-
-      writeData(location.coords.latitude, location.coords.longitude);
-
-
-
-    } catch (error) {
-      console.error('Error getting current location:', error);
-    }
-  };
-
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -165,15 +133,20 @@ export default function MapScreen() {
     );
   }
 
+  // const MarkerPopup = ({ onOptionSelect }) => (
+
+
+  // );
+
   //function to get the status of the bin and assign the accoring png
   const getMarkerStatus = (status: MarkerStatus) => {
     switch (status) {
       case MarkerStatus.Empty:
-        return require('../../assets/images/green-bin.png');
+        return require('../../assets/images/red-bin.png');
       case MarkerStatus.Mid:
         return require('../../assets/images/blue-bin.png');
       default:
-        return require('../../assets/images/red-bin.png');
+        return require('../../assets/images/green-bin.png');
     }
   };
 
@@ -210,9 +183,6 @@ export default function MapScreen() {
           </Marker>
         ))}
       </MapView>
-      <TouchableOpacity style={styles.addButton} onPress={getCurrentLocation}>
-        <Text style={styles.addButtonText}></Text>
-      </TouchableOpacity>
     </View>
   );
 }
