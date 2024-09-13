@@ -1,56 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator, Modal } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, getDocs, onSnapshot, updateDoc, doc, where, query } from 'firebase/firestore';
 import { FIREBASE_APP, FIREBASE_AUTH, FIREBASE_DB } from '@/FirebaseConfig';
+import { MarkerData, MarkerStatus } from '@/types'
+import { getDistanceFromLatLonInKm } from '@/utilities';
 
 const LATITUDE_DELTA = 0.01; // Adjust this value to change zoom level
 const LONGITUDE_DELTA = LATITUDE_DELTA * (Dimensions.get('window').width / Dimensions.get('window').height);
 
-enum MarkerStatus {
-  Full = "FULL",
-  Empty = "Empty",
-  Mid = "MID"
-}
-
-interface MarkerData {
-  id: string;
-  status: MarkerStatus;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
-}
-
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [region, setRegion] = useState<Region | null>(null);
+  const [region, setRegion] = useState<Region | undefined>();
   const mapRef = useRef<MapView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [selectedBin, setSelectedBin] = useState<MarkerData | null>(null)
   const [markers, setMarkers] = useState<MarkerData[]>([]);
 
   useEffect(() => {
-    const fetchMarkers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(FIREBASE_DB, 'kadoi'));
-        const fetchedMarkers: MarkerData[] = [];
-
+    try {
+      setIsLoading(true)
+      const fetchedMarkers: MarkerData[] = [];
+      const q = query(collection(FIREBASE_DB, 'kadoi'), where("isDeleted", "==", false))
+      //ts
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           fetchedMarkers.push({
             id: doc.id,
-            status: MarkerStatus[data.status as keyof typeof MarkerStatus],
+            status: data.status,
             coordinate: {
               latitude: data.latitude,
               longitude: data.longitude
             },
+            isDeleted: false
           });
-
         });
-
         setMarkers(fetchedMarkers);
         if (fetchedMarkers.length > 0) {
           setRegion({
@@ -60,15 +47,16 @@ export default function MapScreen() {
             longitudeDelta: LONGITUDE_DELTA,
           });
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching markers:", error);
-        setIsLoading(false);
-      }
-    };
+      })
+      return unsubscribe
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  })
 
-    fetchMarkers();
-
+  useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -100,6 +88,10 @@ export default function MapScreen() {
     })();
   }, []);
 
+  const closePopup = () => {
+    setSelectedBin(null); // Close the popup by clearing the selected bin
+  };
+
   const updateRegion = (latitude: number, longitude: number) => {
     const newRegion: Region = {
       latitude,
@@ -111,19 +103,71 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(newRegion, 1000);
   };
 
+  const deleteBin = async () => {
+    try {
+      if (!selectedBin) {
+        return
+      }
+      const docRef = doc(FIREBASE_DB, 'kadoi', selectedBin.id)
+      await updateDoc(docRef, {
+        isDeleted: true,
+      });
+      const index = markers.findIndex(marker => marker.id === selectedBin.id)
+      markers.splice(index, 1)
+      setMarkers(markers)
+      closePopup()
+      console.log('updated');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   const writeData = async (lat: number, long: number) => {
     try {
       const doRef = await addDoc(collection(FIREBASE_DB, 'kadoi'), {
         status: MarkerStatus.Empty,
         latitude: lat,
-        longitude: long
+        longitude: long,
+        isDeleted: false
       });
-      console.log('writen');
+      markers.push({
+        id: doRef.id,
+        status: MarkerStatus.Empty,
+        coordinate: {
+          longitude: long,
+          latitude: lat
+        },
+        isDeleted: false
+      })
+      setMarkers(markers)
     } catch (e) {
       console.error(e);
     }
   };
 
+  const cleanBin = async () => {
+    let closestBin: MarkerData | null = null
+    let shortestDistance = Infinity
+
+    if (!location) return
+
+    markers.forEach(mark => {
+      const distance = getDistanceFromLatLonInKm(location.coords.latitude, location.coords.longitude, mark.coordinate.latitude, mark.coordinate.longitude);
+      if (distance < shortestDistance) {
+        shortestDistance = distance;
+        if(distance < 0.010){
+          closestBin = mark;
+        }
+      }
+    });
+
+    if(!closestBin) return
+
+    const docRef = doc(FIREBASE_DB, 'kadoi', (closestBin as MarkerData).id)
+    await updateDoc(docRef, {
+      status: MarkerStatus.Empty,
+    });
+  }
 
   const getCurrentLocation = async () => {
     try {
@@ -165,7 +209,6 @@ export default function MapScreen() {
     );
   }
 
-  //function to get the status of the bin and assign the accoring png
   const getMarkerStatus = (status: MarkerStatus) => {
     switch (status) {
       case MarkerStatus.Empty:
@@ -187,6 +230,9 @@ export default function MapScreen() {
         followsUserLocation={true}
 
         onUserLocationChange={(event) => {
+          if (!event.nativeEvent.coordinate) {
+            return
+          }
           setRegion({
             latitude: event.nativeEvent.coordinate.latitude,
             longitude: event.nativeEvent.coordinate.longitude,
@@ -199,8 +245,7 @@ export default function MapScreen() {
           <Marker
             key={marker.id}
             coordinate={marker.coordinate}
-            title={marker.title}
-            description={marker.description}
+            onPress={() => setSelectedBin(marker)}
           >
             <Image
               source={getMarkerStatus(marker.status)}
@@ -210,9 +255,35 @@ export default function MapScreen() {
           </Marker>
         ))}
       </MapView>
+      <TouchableOpacity style={styles.cleanBinButton} onPress={cleanBin}>
+        <Text style={styles.cleanBinButtonText}></Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.addButton} onPress={getCurrentLocation}>
         <Text style={styles.addButtonText}></Text>
       </TouchableOpacity>
+      {selectedBin && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={!!selectedBin}
+          onRequestClose={closePopup}
+        >
+          <View style={styles.popupOverlay}>
+            <View style={styles.popupContainer}>
+              <Text style={styles.popupTitle}>Delete Bin</Text>
+              <View style={styles.binOptions}>
+                <Text style={styles.deletePromptText}>Do you really want to delete this bin?</Text>
+                <TouchableOpacity onPress={deleteBin} style={styles.deleteButton}>
+                  <Text style={styles.deleteButtonText}>delete</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={closePopup} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -228,9 +299,29 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
+  cleanBinButton: {
+    position: 'absolute',
+    bottom: 90,
+    left: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#00FF00',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  cleanBinButtonText: {
+    fontSize: 30,
+    color: '#FFFFFF',
+  },
   addButton: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 90,
     right: 30,
     width: 60,
     height: 60,
@@ -248,4 +339,60 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: '#FFFFFF',
   },
+  popupOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  popupContainer: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  popupTitle: {
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  binOptions: {
+    flexDirection: 'column',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    width: '100%',
+  },
+  binOption: {
+    alignItems: 'center',
+    margin: 10,
+  },
+  binImage: {
+    width: 50,
+    height: 50,
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'tomato',
+    borderRadius: 5,
+  },
+  deleteButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'red',
+    borderRadius: 5,
+    marginLeft: 'auto'
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontSize: 16,
+    textTransform: 'capitalize'
+  },
+  deletePromptText: {
+    textTransform: 'capitalize'
+  }
 });

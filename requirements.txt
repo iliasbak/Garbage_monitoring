@@ -1,0 +1,29 @@
+admin
+email
+password
+adminCode
+view, edit
+------
+driver
+email
+password
+adminCode
+view, edit 
+------
+FUTURE
+admin can approve user to be under him by changing the field isActivated to true
+PRESENT
+user will automatically be activated so isActivated to true
+------
+admin 
+--------
+user
+phoneNumber
+password
+adminCode
+isActivated 
+view, edit
+
+
+all yours!!
+okay

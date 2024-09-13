@@ -1,16 +1,16 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Slot } from "expo-router";
+import { SessionProvider } from "@/providers/SessionProvider";
+import { ConfirmationResultProvider } from "@/providers/ConfirmationResultProvider";
+import { Provider } from "jotai";
+import { useColorScheme } from "react-native";
+import { useFonts } from "expo-font";
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { useEffect } from "react";
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+export default function Root() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -26,12 +26,16 @@ export default function RootLayout() {
     return null;
   }
 
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+    <Provider>
+    <SessionProvider>
+      <ConfirmationResultProvider>
+        <Slot />
+      </ConfirmationResultProvider>
+    </SessionProvider>
+    </Provider>
     </ThemeProvider>
   );
 }

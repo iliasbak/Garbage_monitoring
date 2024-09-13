@@ -1,56 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
-import MapView, { Marker, Region, Callout } from 'react-native-maps';
+import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator, Modal } from 'react-native';
+import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { collection, addDoc, getDocs } from 'firebase/firestore';
-import { FIREBASE_APP, FIREBASE_AUTH, FIREBASE_DB } from '@/FirebaseConfig';
+import { collection, updateDoc, doc, onSnapshot, where, query } from 'firebase/firestore';
+import { FIREBASE_DB } from '@/FirebaseConfig';
+import { MarkerData, MarkerStatus } from '@/types';
 
 const LATITUDE_DELTA = 0.01; // Adjust this value to change zoom level
 const LONGITUDE_DELTA = LATITUDE_DELTA * (Dimensions.get('window').width / Dimensions.get('window').height);
 
-enum MarkerStatus {
-  Full = "FULL",
-  Empty = "Empty",
-  Mid = "MID"
-}
-
-interface MarkerData {
-  id: string;
-  status: MarkerStatus;
-  coordinate: {
-    latitude: number;
-    longitude: number;
-  };
-}
-
 export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [region, setRegion] = useState<Region | null>(null);
+  const [region, setRegion] = useState<Region | undefined>();
   const mapRef = useRef<MapView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const [markers, setMarkers] = useState<MarkerData[]>([]);
+  const [selectedBin, setSelectedBin] = useState<MarkerData | null>(null);
+
+  const closePopup = () => {
+    setSelectedBin(null);
+  };
 
   useEffect(() => {
-    const fetchMarkers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(FIREBASE_DB, 'kadoi'));
-        const fetchedMarkers: MarkerData[] = [];
-
+    try {
+      setIsLoading(true)
+      const fetchedMarkers: MarkerData[] = [];
+      const q = query( collection(FIREBASE_DB, 'kadoi'), where("isDeleted", "==", false))
+      //ts
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           fetchedMarkers.push({
             id: doc.id,
-            status: MarkerStatus[data.status as keyof typeof MarkerStatus],
+            status: data.status,
             coordinate: {
               latitude: data.latitude,
               longitude: data.longitude
             },
+            isDeleted: data.isDeleted
           });
-
         });
-
         setMarkers(fetchedMarkers);
         if (fetchedMarkers.length > 0) {
           setRegion({
@@ -60,15 +51,16 @@ export default function MapScreen() {
             longitudeDelta: LONGITUDE_DELTA,
           });
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Error fetching markers:", error);
-        setIsLoading(false);
-      }
-    };
+      })
+      return unsubscribe
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  })
 
-    fetchMarkers();
-
+  useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -111,14 +103,24 @@ export default function MapScreen() {
     mapRef.current?.animateToRegion(newRegion, 1000);
   };
 
-  const writeData = async (lat: number, long: number) => {
+  const udpateStatus = async (markerStatus: MarkerStatus) => {
     try {
-      const doRef = await addDoc(collection(FIREBASE_DB, 'kadoi'), {
-        status: MarkerStatus.Empty,
-        latitude: lat,
-        longitude: long
+      if(!selectedBin) {
+        return
+      }
+      const docRef = doc(FIREBASE_DB, 'kadoi', selectedBin.id)
+      const doRef = await updateDoc(docRef, {
+        status: markerStatus,
       });
-      console.log('writen');
+      const index = markers.findIndex(marker => marker.id === selectedBin.id)
+      markers[index] = {
+        ...markers[index],
+        status: markerStatus
+      }
+      console.log({markers})
+      setMarkers(markers)
+      closePopup()
+      console.log('updated');
     } catch (e) {
       console.error(e);
     }
@@ -133,46 +135,14 @@ export default function MapScreen() {
     );
   }
 
-  const MarkerPopup = ({ onOptionSelect }) => (
-    <View style={styles.popupContainer}>
-      <TouchableOpacity onPress={() => onOptionSelect('GREEN')} style={styles.option}>
-        <Image
-          source={require('../../assets/images/green-bin.png')}
-          style={styles.optionImage}
-          resizeMode="contain"
-          onError={(e) => console.log("Image load error for green bin:", e.nativeEvent.error)}
-        />
-        <Text>EMPTY</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => onOptionSelect('MID')} style={styles.option}>
-        <Image
-          style={{ height: 100, width: 50 }}
-          source={{
-            uri: 'https://reactnative.dev/img/tiny_logo.png',
-          }}
-        />
-        <Text>MID</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => onOptionSelect('FULL')} style={styles.option}>
-        <Image
-          source={require('../../assets/images/red-bin.png')}
-          style={{ width: 30, height: 30 }}
-          resizeMode="contain"
-        />
-        <Text>FULL</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
-  //function to get the status of the bin and assign the accoring png
   const getMarkerStatus = (status: MarkerStatus) => {
     switch (status) {
       case MarkerStatus.Empty:
-        return require('../../assets/images/red-bin.png');
+        return require('../../assets/images/green-bin.png');
       case MarkerStatus.Mid:
         return require('../../assets/images/blue-bin.png');
       default:
-        return require('../../assets/images/green-bin.png');
+        return require('../../assets/images/red-bin.png');
     }
   };
 
@@ -186,6 +156,9 @@ export default function MapScreen() {
         followsUserLocation={true}
 
         onUserLocationChange={(event) => {
+          if(!event.nativeEvent.coordinate){
+            return
+          }
           setRegion({
             latitude: event.nativeEvent.coordinate.latitude,
             longitude: event.nativeEvent.coordinate.longitude,
@@ -199,26 +172,59 @@ export default function MapScreen() {
           <Marker
             key={marker.id}
             coordinate={marker.coordinate}
-            title={marker.title}
-            description={marker.description}
+            onPress={() => setSelectedBin(marker)}
           >
             <Image
               source={getMarkerStatus(marker.status)}
               style={{ width: 40, height: 40 }}
               resizeMode="contain"
             />
-            <Callout tooltip>
-              <MarkerPopup
-                onOptionSelect={(option) => {
-                  // Handle option selection here
-                  console.log(`Selected option: ${option} for marker ${marker.id}`);
-                  // You can add your logic here, e.g., updating marker status
-                }}
-              />
-            </Callout>
           </Marker>
         ))}
       </MapView>
+      {selectedBin && (
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={!!selectedBin}
+          onRequestClose={closePopup}
+        >
+          <View style={styles.popupOverlay}>
+            <View style={styles.popupContainer}>
+              <Text style={styles.popupTitle}>Select Bin Status</Text>
+              <View style={styles.binOptions}>
+                <TouchableOpacity style={styles.binOption} onPress={() => udpateStatus(MarkerStatus.Empty)}>
+                  <Image
+                    source={require('../../assets/images/green-bin.png')}
+                    style={styles.binImage}
+                    resizeMode="contain"
+                  />
+                  <Text>Empty</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.binOption}  onPress={() => udpateStatus(MarkerStatus.Mid)}>
+                  <Image
+                    source={require('../../assets/images/blue-bin.png')}
+                    style={styles.binImage}
+                    resizeMode="contain"
+                  />
+                  <Text>Mid</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.binOption} onPress={() => udpateStatus(MarkerStatus.Full)}>
+                  <Image
+                    source={require('../../assets/images/red-bin.png')}
+                    style={styles.binImage}
+                    resizeMode="contain"
+                  />
+                  <Text>Full</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={closePopup} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -254,16 +260,6 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: '#FFFFFF',
   },
-  popupContainer: {
-    // borderRadius: 15,
-    // padding: 10,
-    width: 300,  // Increase this if needed
-    height: 100, // Increase this if needed
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white'
-    // alignItems: 'center',
-  },
   option: {
     //   width: 120, // Adjust as needed
     //   height: 80, // Adjust as needed
@@ -276,5 +272,45 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     marginBottom: 5, // Add some space between image and text
+  },
+  popupOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  popupContainer: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  popupTitle: {
+    fontSize: 18,
+    marginBottom: 10,
+  },
+  binOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  binOption: {
+    alignItems: 'center',
+    margin: 10,
+  },
+  binImage: {
+    width: 50,
+    height: 50,
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'tomato',
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 12,
   },
 });
