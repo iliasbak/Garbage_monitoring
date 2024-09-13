@@ -167,6 +167,12 @@ export default function MapScreen() {
     await updateDoc(docRef, {
       status: MarkerStatus.Empty,
     });
+    const index = markers.findIndex(marker => marker.id === (closestBin as MarkerData).id)
+    markers[index] = {
+      ...markers[index],
+      status: MarkerStatus.Empty
+    }
+    setMarkers(markers)
   }
 
   const getCurrentLocation = async () => {

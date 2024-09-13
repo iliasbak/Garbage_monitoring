@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator, Modal } from 'react-native';
+import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator, Modal, Pressable } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { collection, updateDoc, doc, onSnapshot, where, query } from 'firebase/firestore';
@@ -117,7 +117,6 @@ export default function MapScreen() {
         ...markers[index],
         status: markerStatus
       }
-      console.log({markers})
       setMarkers(markers)
       closePopup()
       console.log('updated');
