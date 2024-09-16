@@ -276,7 +276,7 @@ export default function MapScreen() {
         >
           <View style={styles.popupOverlay}>
             <View style={styles.popupContainer}>
-              <Text style={styles.popupTitle}>Διαγραφεί κάδου</Text>
+              <Text style={styles.popupTitle}>διαγραφή κάδου</Text>
               <View style={styles.binOptions}>
                 <Text style={styles.deletePromptText}>θέλεις να διαγράψεις σίγουρα τον κάδο;</Text>
                 <TouchableOpacity onPress={deleteBin} style={styles.deleteButton}>
@@ -284,7 +284,7 @@ export default function MapScreen() {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={closePopup} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>κλείσιμο</Text>
+                <Text style={styles.closeButtonText}>Κλείσιμο</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -399,6 +399,5 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize'
   },
   deletePromptText: {
-    textTransform: 'capitalize'
   }
 });
