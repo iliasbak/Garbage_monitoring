@@ -276,15 +276,15 @@ export default function MapScreen() {
         >
           <View style={styles.popupOverlay}>
             <View style={styles.popupContainer}>
-              <Text style={styles.popupTitle}>Delete Bin</Text>
+              <Text style={styles.popupTitle}>Διαγραφεί κάδου</Text>
               <View style={styles.binOptions}>
-                <Text style={styles.deletePromptText}>Do you really want to delete this bin?</Text>
+                <Text style={styles.deletePromptText}>θέλεις να διαγράψεις σίγουρα τον κάδο;</Text>
                 <TouchableOpacity onPress={deleteBin} style={styles.deleteButton}>
-                  <Text style={styles.deleteButtonText}>delete</Text>
+                  <Text style={styles.deleteButtonText}>διαγραφή</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={closePopup} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>κλείσιμο</Text>
               </TouchableOpacity>
             </View>
           </View>

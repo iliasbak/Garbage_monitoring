@@ -190,7 +190,7 @@ export default function MapScreen() {
         >
           <View style={styles.popupOverlay}>
             <View style={styles.popupContainer}>
-              <Text style={styles.popupTitle}>Select Bin Status</Text>
+              <Text style={styles.popupTitle}>Επίλεξε τη στάθμη του κάδου</Text>
               <View style={styles.binOptions}>
                 <TouchableOpacity style={styles.binOption} onPress={() => udpateStatus(MarkerStatus.Empty)}>
                   <Image
@@ -198,7 +198,7 @@ export default function MapScreen() {
                     style={styles.binImage}
                     resizeMode="contain"
                   />
-                  <Text>Empty</Text>
+                  <Text>Άδειος</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.binOption}  onPress={() => udpateStatus(MarkerStatus.Mid)}>
                   <Image
@@ -206,7 +206,7 @@ export default function MapScreen() {
                     style={styles.binImage}
                     resizeMode="contain"
                   />
-                  <Text>Mid</Text>
+                  <Text>Μέση</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.binOption} onPress={() => udpateStatus(MarkerStatus.Full)}>
                   <Image
@@ -214,11 +214,11 @@ export default function MapScreen() {
                     style={styles.binImage}
                     resizeMode="contain"
                   />
-                  <Text>Full</Text>
+                  <Text>Γεμάτος</Text>
                 </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={closePopup} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>Κλείσιμο</Text>
               </TouchableOpacity>
             </View>
           </View>
