@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Dimensions, Image, TouchableOpacity, Text, ActivityIndicator, Modal } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
+import MapView, { Marker, Polyline, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { collection, addDoc, getDocs, onSnapshot, updateDoc, doc, where, query } from 'firebase/firestore';
-import { FIREBASE_APP, FIREBASE_AUTH, FIREBASE_DB } from '@/FirebaseConfig';
+import { collection, addDoc, onSnapshot, updateDoc, doc, where, query } from 'firebase/firestore';
+import { FIREBASE_DB } from '@/FirebaseConfig';
 import { MarkerData, MarkerStatus } from '@/types'
-import { getDistanceFromLatLonInKm } from '@/utilities';
+import { areAllPointsInOtherList, getDistanceFromLatLonInKm } from '@/utilities';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { directionCoordinatesAtom, fullBinsCoordinatesAtom } from '@/atoms';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 const LATITUDE_DELTA = 0.01; // Adjust this value to change zoom level
 const LONGITUDE_DELTA = LATITUDE_DELTA * (Dimensions.get('window').width / Dimensions.get('window').height);
@@ -18,6 +23,14 @@ export default function MapScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedBin, setSelectedBin] = useState<MarkerData | null>(null)
   const [markers, setMarkers] = useState<MarkerData[]>([]);
+  const [isShowingRoutes, setIsShowingRoutes] = useState(false)
+
+  const setFullBinsCoordinates = useSetAtom(fullBinsCoordinatesAtom)
+  const directionCoordinates = useAtomValue(directionCoordinatesAtom)
+
+  const fullBinsRef = useRef<MarkerData[]>([])
+
+  const canShowDirections = isShowingRoutes && directionCoordinates.state === 'hasData' && directionCoordinates.data.length > 0
 
   useEffect(() => {
     try {
@@ -46,6 +59,18 @@ export default function MapScreen() {
             latitudeDelta: LATITUDE_DELTA,
             longitudeDelta: LONGITUDE_DELTA,
           });
+        }
+        const fullBins: MarkerData[] = fetchedMarkers.filter(marker => marker.status === MarkerStatus.Full)
+        if(fullBinsRef.current){
+          if(!areAllPointsInOtherList(fullBins,fullBinsRef.current)){
+            fullBinsRef.current = fullBins
+            if(location){
+              setFullBinsCoordinates([...fullBins.map((marker) => marker.coordinate),{
+                longitude: location.coords.longitude,
+                latitude: location.coords.latitude
+              }])
+            }
+          }
         }
       })
       return unsubscribe
@@ -155,13 +180,13 @@ export default function MapScreen() {
       const distance = getDistanceFromLatLonInKm(location.coords.latitude, location.coords.longitude, mark.coordinate.latitude, mark.coordinate.longitude);
       if (distance < shortestDistance) {
         shortestDistance = distance;
-        if(distance < 0.010){
+        if (distance < 0.010) {
           closestBin = mark;
         }
       }
     });
 
-    if(!closestBin) return
+    if (!closestBin) return
 
     const docRef = doc(FIREBASE_DB, 'kadoi', (closestBin as MarkerData).id)
     await updateDoc(docRef, {
@@ -260,12 +285,18 @@ export default function MapScreen() {
             />
           </Marker>
         ))}
+        {
+          canShowDirections && <Polyline coordinates={directionCoordinates.data} strokeColor='blue' strokeWidth={2} />
+        }
       </MapView>
+      <TouchableOpacity style={styles.showRoutesButton} onPress={() => setIsShowingRoutes(isShowingRoute => !isShowingRoute)}>
+        <FontAwesome5 name="directions" size={28} color="white" />
+      </TouchableOpacity>
       <TouchableOpacity style={styles.cleanBinButton} onPress={cleanBin}>
-        <Text style={styles.cleanBinButtonText}></Text>
+        <MaterialIcons name="cleaning-services" size={28} color="white" />
       </TouchableOpacity>
       <TouchableOpacity style={styles.addButton} onPress={getCurrentLocation}>
-        <Text style={styles.addButtonText}></Text>
+      <FontAwesome6 name="trash-arrow-up" size={28} color="white" />
       </TouchableOpacity>
       {selectedBin && (
         <Modal
@@ -276,7 +307,7 @@ export default function MapScreen() {
         >
           <View style={styles.popupOverlay}>
             <View style={styles.popupContainer}>
-              <Text style={styles.popupTitle}>διαγραφή κάδου</Text>
+              <Text style={styles.popupTitle}>Διαγραφή κάδου</Text>
               <View style={styles.binOptions}>
                 <Text style={styles.deletePromptText}>θέλεις να διαγράψεις σίγουρα τον κάδο;</Text>
                 <TouchableOpacity onPress={deleteBin} style={styles.deleteButton}>
@@ -312,7 +343,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#00FF00',
+    backgroundColor: '#34bf00',
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
@@ -325,6 +356,26 @@ const styles = StyleSheet.create({
     fontSize: 30,
     color: '#FFFFFF',
   },
+  showRoutesButton: {
+    position: 'absolute',
+    top: 90,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'blue',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  showRoutesText: {
+    fontSize: 30,
+    color: '#FFFFFF',
+  },
   addButton: {
     position: 'absolute',
     bottom: 90,
@@ -332,7 +383,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007AFF',
+    backgroundColor: 'indigo',
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
