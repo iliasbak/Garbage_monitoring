@@ -4,16 +4,20 @@ import { ConfirmationResultProvider } from "@/providers/ConfirmationResultProvid
 import { Provider } from "jotai";
 import { useColorScheme } from "react-native";
 import { useFonts } from "expo-font";
-import * as SplashScreen from 'expo-splash-screen';
+import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
+} from "@react-navigation/native";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function Root() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
   useEffect(() => {
@@ -26,16 +30,15 @@ export default function Root() {
     return null;
   }
 
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-    <Provider>
-    <SessionProvider>
-      <ConfirmationResultProvider>
-        <Slot />
-      </ConfirmationResultProvider>
-    </SessionProvider>
-    </Provider>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <Provider>
+        <SessionProvider>
+          <ConfirmationResultProvider>
+            <Slot />
+          </ConfirmationResultProvider>
+        </SessionProvider>
+      </Provider>
     </ThemeProvider>
   );
 }
